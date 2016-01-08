@@ -18,6 +18,7 @@ _bioguide_root = 'bioguide.congress.gov/biosearch'
 _biosearch_url = urljoin(_bioguide_root, 'biosearch.asp')
 _biosearch_results_url = urljoin(_bioguide_root, 'biosearch1.asp')
 _default_output = 'crawler_results'
+_summary = 'run_info.txt'
 
 
 
@@ -42,6 +43,7 @@ def _scrape_bioguide(year, output_root):
     # TODO: simple anti-anti scraping delays.
     # TODO: smarter search/supporting other sites
     # TODO: method organization
+    start_time = datetime.datetime.now()
     browser, display = _setup_headless_browser()
    
     browser.get(_biosearch_url)
@@ -59,16 +61,35 @@ def _scrape_bioguide(year, output_root):
         browser.find_elements_by_tag_name('a')]
 
     output_dir = _setup_output_dir(output_root)
+    errors = []
     for name, link in names_and_links:
         if name == 'Search Again':
             continue
         else:
-            page = requests.get(link)
-            with open(os.path.join(output_dir, name), 'w') as output:
-                output.write(page.contents) 
-        
+            try:
+                page = requests.get(link)
+                with open(os.path.join(output_dir, name), 'w') as output:
+                    output.write(page.contents) 
+            except:
+                errors.append(sys.exc_info()[0])
+
+    end_time = datetime.datetime.now()
+    _write_log(year, output_root, errors, start_time, end_time)
+
     browser.quit()
     display.close()
+
+
+def _write_log(year, output_root, errors, start_time, end_time):
+    #TODO: stuff everything in a dict and json.dumps it?
+    with open(os.path.join(output_root, summary), 'w') as output:
+        output.write('year: {}'.format(year))
+        output.write('start_time: {}'.format(start_time))
+        output.write('end_time: {}'.format(end_time))
+        output.write('errors:')
+        for error in errors:
+            output.write('\t{}\n'.format(str(error)))
+
 
 
 def main():
